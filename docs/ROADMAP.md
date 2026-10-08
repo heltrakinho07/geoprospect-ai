@@ -31,3 +31,10 @@
 - [x] Authenticated downloads, per-organization daily limit and pixel/area/time budgets.
 - [ ] Production queue (Cloud Tasks/Cloud Run Jobs), object storage and recovery after server restart.
 - [ ] Multi-scene selection/provenance, real provider-account smoke tests and external QA validation.
+
+## R3 — Prospectivity Workspace pilot (outubro 2026)
+- [x] Weighting of spectral GeoTIFF, fault-distance and favorable lithology with metric UTM distances.
+- [x] Masked NoData intersections, GeoTIFF preview, target GeoJSON and provenance SHA-256.
+- [x] Authenticated tenant-scoped jobs, results and downloads; preview in MapLibre.
+- [ ] Validate real Manica datasets, method sensitivity, uncertain geology and QA/QC.
+- [ ] Durable cloud jobs, migrations, backed-up object storage and production isolation checks.

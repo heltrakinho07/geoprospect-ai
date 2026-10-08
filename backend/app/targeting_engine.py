@@ -6,6 +6,8 @@ WebGIS preview. No spectral index is treated as evidence of mineralization alone
 """
 from __future__ import annotations
 import json
+import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -153,8 +155,11 @@ def analyze(source_path: Path, aoi: dict, settings: dict,
             coverage = rasterize(shapes_all, out_shape=metric.shape,
                                  transform=tr, fill=0, dtype="uint8") == 1
             favorite = set(settings["favorable_values"])
+            selected = [(mapping(g), 1) for g, props in polygons if str(props.get(field)) in favorite]
+            if not selected:
+                raise EvidenceError("Nenhum polígono corresponde às classes litológicas favoráveis")
             favorable = rasterize(
-                [(mapping(g), 1) for g, props in polygons if str(props.get(field)) in favorite],
+                selected,
                 out_shape=metric.shape, transform=tr, fill=0, dtype="uint8") if favorite else np.zeros(metric.shape, dtype="uint8")
             lithology = favorable.astype("float64")
             lithology[~coverage | ~inside] = np.nan
@@ -202,6 +207,27 @@ def analyze(source_path: Path, aoi: dict, settings: dict,
         alpha = np.uint8(valid_src * 205)
         Image.fromarray(np.stack([red, green, blue, alpha], axis=-1), "RGBA").save(dest / "preview.png")
         (dest / "targets.geojson").write_text(json.dumps(targets, ensure_ascii=False), encoding="utf-8")
+        provenance = {
+            "algorithm": "geoprospect_weighted_evidence_r3_v1",
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "interpretation": "relative_favorability_not_deposit_probability",
+            "source_job_id": settings["raster_job_id"],
+            "source_geotiff_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+            "parameters": settings,
+            "structural_dataset_sha256": hashlib.sha256(
+                json.dumps(structural_geojson, sort_keys=True, ensure_ascii=False).encode()
+            ).hexdigest() if structural_geojson is not None else None,
+            "geology_dataset_sha256": hashlib.sha256(
+                json.dumps(geology_geojson, sort_keys=True, ensure_ascii=False).encode()
+            ).hexdigest() if geology_geojson is not None else None,
+            "output_geotiff_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+            "output_targets_sha256": hashlib.sha256((dest / "targets.geojson").read_bytes()).hexdigest(),
+            "crs_metric": dst_crs.to_string(),
+            "valid_data_fraction": round(float(valid.sum()) / max(int(inside.sum()), 1), 5),
+        }
+        (dest / "provenance.json").write_text(
+            json.dumps(provenance, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         bounds = rasterio.warp.transform_bounds(src.crs, "EPSG:4326", *src.bounds)
         return {
             "min": round(float(score[valid].min()), 5),

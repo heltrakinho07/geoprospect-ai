@@ -42,3 +42,9 @@ GET /v1/orgs/{organization}/projects/{project}/prospectivity/runs/{id}
 GET /v1/orgs/{organization}/projects/{project}/prospectivity/runs/{id}/preview|geotiff|targets
 
 Authenticated downloads are always validated against organization and project. No public raster URLs are generated.
+
+## Proveniência verificável
+
+Cada execução guarda o algoritmo/versionamento, os parâmetros científicos, referências do job espectral, CRS e hashes SHA-256 dos dados e artefactos GeoTIFF/GeoJSON. Exporte `provenance.json` no histórico. Hashes permitem detectar alterações em ficheiros; não garantem validade mineralógica nem identificam a origem licenciada de cada mapa.
+
+GET /v1/orgs/{organization}/projects/{project}/prospectivity/runs/{id}/provenance

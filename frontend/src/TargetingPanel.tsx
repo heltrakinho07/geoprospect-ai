@@ -85,7 +85,7 @@ export default function TargetingPanel({orgId,projectId,token,datasets,onPreview
       await refresh();
     }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
   }
-  async function fetchProtected(id:string,kind:"preview"|"geotiff"|"targets"):Promise<Blob>{
+  async function fetchProtected(id:string,kind:"preview"|"geotiff"|"targets"|"provenance"):Promise<Blob>{
     const response=await fetch(API_URL+url+"/runs/"+id+"/"+kind,{headers:{"Authorization":"Bearer "+token}});
     if(!response.ok)throw new Error("Não foi possível obter o resultado ("+response.status+").");
     return response.blob();
@@ -102,14 +102,14 @@ export default function TargetingPanel({orgId,projectId,token,datasets,onPreview
       setNotice(geojson.features.length+" polígonos candidatos desenhados no mapa.");
     }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
   }
-  async function download(run:TargetRun,kind:"geotiff"|"targets"){
+  async function download(run:TargetRun,kind:"geotiff"|"targets"|"provenance"){
     setBusy(true);setError("");
     try{
       const content=await fetchProtected(run.id,kind);
       const address=URL.createObjectURL(content);
       const anchor=document.createElement("a");
       anchor.href=address;
-      anchor.download="geoprospect-"+run.id+(kind==="targets"?"-targets.geojson":"-score.tif");
+      anchor.download="geoprospect-"+run.id+(kind==="targets"?"-targets.geojson":kind==="provenance"?"-provenance.json":"-score.tif");
       anchor.click();
       setTimeout(()=>URL.revokeObjectURL(address),5000);
     }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
@@ -173,6 +173,7 @@ export default function TargetingPanel({orgId,projectId,token,datasets,onPreview
         <button disabled={busy} onClick={()=>void view(run)}><Eye size={14}/> Ver mapa</button>
         <button disabled={busy} onClick={()=>void download(run,"targets")}><CloudDownload size={14}/> Alvos</button>
         <button disabled={busy} onClick={()=>void download(run,"geotiff")}><CloudDownload size={14}/> GeoTIFF</button>
+        <button disabled={busy} onClick={()=>void download(run,"provenance")}><CloudDownload size={14}/> Metadados</button>
       </div>}
     </div>)}
   </div>;
