@@ -23,6 +23,7 @@ services:
       SENTINEL_HUB_CLIENT_ID: ${SENTINEL_HUB_CLIENT_ID:-}
       SENTINEL_HUB_CLIENT_SECRET: ${SENTINEL_HUB_CLIENT_SECRET:-}
       RASTER_STORAGE_DIR: /app/storage/rasters
+      GCS_PRIVATE_BUCKET: ${GCS_PRIVATE_BUCKET:-}
       CORS_ORIGINS: http://localhost:5173
     volumes:
       - raster_storage:/app/storage/rasters
@@ -43,6 +44,7 @@ services:
       SENTINEL_HUB_CLIENT_ID: ${SENTINEL_HUB_CLIENT_ID:-}
       SENTINEL_HUB_CLIENT_SECRET: ${SENTINEL_HUB_CLIENT_SECRET:-}
       RASTER_STORAGE_DIR: /app/storage/rasters
+      GCS_PRIVATE_BUCKET: ${GCS_PRIVATE_BUCKET:-}
     volumes:
       - raster_storage:/app/storage/rasters
     depends_on:

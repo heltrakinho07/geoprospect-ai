@@ -13,6 +13,7 @@ from .db import SessionLocal,get_db
 from .models import QueueTask,RasterJob,User
 from .sentinel import INDEXES,credentials_available,fetch_index
 from .raster_processing import safe_job_dir,process_tiff
+from .object_store import publish_artifacts, get_local_artifact
 
 router=APIRouter(prefix="/v1/orgs/{org_id}/projects/{project_id}/raster",tags=["Raster R2"])
 
@@ -54,6 +55,7 @@ def execute_job(job_id:str,org_id:str,project_id:str,aoi:dict,session_factory=No
             db.commit()
             raw=fetch_index(aoi,(job.date_from,job.date_to),job.index_name,(384,384),job.max_cloud)
             result=process_tiff(raw,aoi,org_id,project_id,job_id)
+            publish_artifacts(org_id,project_id,job_id,["index.tif","preview.png"])
             if db.bind.dialect.name=="postgresql":
                 db.execute(text("SELECT set_config('app.current_org_id', :org, true)"),{"org":org_id})
             job.stats=result
@@ -131,7 +133,7 @@ def download_job_asset(org_id:str,project_id:str,job_id:str,kind:str,user:User=D
         directory=safe_job_dir(org_id,project_id,job_id)
     except ValueError:
         raise HTTPException(404,"Identificador inválido")
-    path=directory/("preview.png" if kind=="preview" else "index.tif")
+    path=get_local_artifact(org_id,project_id,job_id,"preview.png" if kind=="preview" else "index.tif")
     if not path.is_file():
         raise HTTPException(404,"Ficheiro não encontrado no armazenamento configurado")
     return FileResponse(path,media_type="image/png" if kind=="preview" else "image/tiff",

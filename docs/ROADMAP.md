@@ -44,3 +44,6 @@
 - [x] Perturbation sensitivity of normalized evidence weights (±20%) and threshold-change diagnostics.
 - [ ] Production cloud object storage, lease heartbeats, least-privilege worker identity and worker telemetry.
 - [ ] Geological field validation and methodology review.
+
+- [x] Optional private Cloud Storage adapter with authenticated API retrieval and tenant-scoped object prefixes.
+- [ ] Create and configure production bucket, Google Cloud identity, IAM, retention, backup and production deployment.
