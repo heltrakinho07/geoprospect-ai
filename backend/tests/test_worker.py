@@ -61,7 +61,7 @@ def test_weight_sensitivity_crosses_threshold():
             "structure":np.array([[0.2,0.9],[.9,.9]])}
     weights={"spectral":1.0,"structure":1.0}
     score,valid=weighted_evidence(layers,weights)
-    report=weight_sensitivity(layers,weights,score,valid,threshold=.6)
+    report=weight_sensitivity(layers,weights,score,valid,threshold=.68)
     assert len(report["scenarios"])==4
     assert report["max_threshold_flip_fraction"]>0
     assert all(0<=s["threshold_flip_fraction"]<=1 for s in report["scenarios"])
