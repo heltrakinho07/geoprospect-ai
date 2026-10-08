@@ -153,4 +153,9 @@ def main():
             time.sleep(5)
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--once" in sys.argv:
+        logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+        run_once()
+    else:
+        main()

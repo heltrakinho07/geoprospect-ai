@@ -67,3 +67,5 @@ The API commits an internal queue entry with each raster/prospectivity job. A se
 ### Optional Cloud Storage
 
 Set `GCS_PRIVATE_BUCKET` on the server and worker and provide Google Cloud Application Default Credentials to activate remote private object storage. Georeferenced outputs are uploaded *before* the job completes; authenticated API requests retrieve missing artifacts from tenant-scoped prefixes. Leave it unset for Docker local volume development. The repository does not create a bucket or deploy cloud resources automatically.
+
+R4 deployment notes: [Worker, Cloud Storage and release requirements](docs/R4_OPERATIONS.md).
