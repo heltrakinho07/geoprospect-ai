@@ -39,3 +39,12 @@ input:not([type=range]),select{padding:12px 13px;border-radius:9px;border:1px so
 .refresh-button{float:right;background:none;border:0;color:#a2d9ca;padding:0}.raster-job{padding:13px;background:#132b2b;border:1px solid #284c45;border-radius:10px;display:flex;flex-direction:column;gap:7px}
 .raster-job-title{display:flex;justify-content:space-between;align-items:center}.raster-job b{font-size:12px}.raster-job small{font-size:11px;color:#99b4ab}.raster-job .raster-error{color:#ffbcae}.raster-status{font-size:10px;text-transform:uppercase;padding:4px 7px;border-radius:5px;background:#28403e;color:#abcac1}.raster-status.completed{background:#185c44;color:#a8f8d7}.raster-status.failed{background:#603329;color:#ffb7a4}
 .raster-actions{display:flex;gap:8px}.raster-actions button{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #3a6e5e;background:#16463c;color:#d0f5e8;padding:9px;border-radius:7px;font-size:11px;flex:1}
+
+.targeting-panel .primary{width:100%}.targeting-panel .index-notice p{margin:8px 0 0;font-size:11px}
+.targeting-panel .list-label{margin:20px 0 0}
+.inline-check{font-size:11px;color:#c7e3d8;display:flex;gap:9px;align-items:center}
+.inline-check input{width:16px;height:16px;accent-color:#34ddba}
+.targeting-summary{padding:10px;background:#163b36;border-radius:8px;display:flex;gap:5px;flex-direction:column}
+.targeting-summary strong{font-size:13px;color:#82f0cf}.targeting-summary span{font-size:11px;color:#c0ded6}
+.targeting-summary small{color:#7bb19e}
+.wrap-actions{flex-wrap:wrap}.wrap-actions button{min-width:40%}

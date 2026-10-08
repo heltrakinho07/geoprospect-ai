@@ -3,6 +3,7 @@ import maplibregl from "maplibre-gl";
 import {bbox} from "@turf/turf";
 import {api} from "./api";
 import RasterPanel,{type RasterOverlay} from "./RasterPanel";
+import TargetingPanel from "./TargetingPanel";
 import {Activity,ArrowRight,ChevronDown,Cloud,Database,Download,FileJson,FolderOpen,Layers3,LogOut,MapPinned,Menu,Plus,Satellite,ShieldCheck,Target,Trash2,Upload,Waypoints,X} from "lucide-react";
 
 type GeoData={type:string;coordinates?:unknown;features?:unknown[];geometry?:GeoData};
@@ -56,12 +57,13 @@ export default function App(){
   const [token,setToken]=useState(()=>sessionStorage.getItem("gp_token")||"");
   const [orgs,setOrgs]=useState<Membership[]>([]);
   const [orgId,setOrgId]=useState("");
-  const [panel,setPanel]=useState<"projects"|"layers"|"sentinel"|"raster">("projects");
+  const [panel,setPanel]=useState<"projects"|"layers"|"sentinel"|"raster"|"targeting">("projects");
   const [projects,setProjects]=useState<Project[]>([]);
   const [project,setProject]=useState<Project|null>(null);
   const [datasets,setDatasets]=useState<Dataset[]>([]);
   const [scenes,setScenes]=useState<StacItem[]>([]);
   const [rasterOverlay,setRasterOverlay]=useState<RasterOverlay|null>(null);
+  const [targetFeatures,setTargetFeatures]=useState<any>({type:"FeatureCollection",features:[]});
   const [draw,setDraw]=useState(false);
   const drawRef=useRef(false);
   const [vertices,setVertices]=useState<number[][]>([]);
@@ -96,7 +98,21 @@ export default function App(){
       URL.revokeObjectURL(rasterOverlay.url);
     };
   },[rasterOverlay,mapReady]);
-  useEffect(()=>{setRasterOverlay(null);},[orgId,project?.id]);
+  useEffect(()=>{setRasterOverlay(null);setTargetFeatures({type:"FeatureCollection",features:[]});},[orgId,project?.id]);
+  useEffect(()=>{
+    const m=map.current;
+    if(!m||!mapReady)return;
+    const render=()=>{
+      if(!m.getSource("prospectivity-targets")){
+        m.addSource("prospectivity-targets",{type:"geojson",data:targetFeatures});
+        m.addLayer({id:"targets-fill",type:"fill",source:"prospectivity-targets",paint:{"fill-color":"#ffb84e","fill-opacity":0.28}});
+        m.addLayer({id:"targets-outline",type:"line",source:"prospectivity-targets",paint:{"line-color":"#ffac36","line-width":3}});
+      }else{
+        (m.getSource("prospectivity-targets") as maplibregl.GeoJSONSource).setData(targetFeatures);
+      }
+    };
+    if(m.isStyleLoaded())render();else m.once("load",render);
+  },[targetFeatures,mapReady]);
   useEffect(()=>{drawRef.current=draw;},[draw]);
   useEffect(()=>{
     if(!token){setOrgs([]);setOrgId("");return;}
@@ -193,15 +209,15 @@ export default function App(){
         <button className={panel==="layers"?"active":""} onClick={()=>{setPanel("layers");setMobileNav(false);}}><Layers3 size={17}/> Camadas</button>
         <button className={panel==="sentinel"?"active":""} onClick={()=>{setPanel("sentinel");setMobileNav(false);}}><Satellite size={17}/> Sentinel Explorer</button>
         <button className={panel==="raster"?"active":""} onClick={()=>{setPanel("raster");setMobileNav(false);}}><Cloud size={17}/> Índices espectrais</button>
-        <button disabled title="Disponível na fase R3"><Target size={17}/> Prospectivity Engine <span className="soon">R3</span></button>
+        <button className={panel==="targeting"?"active":""} onClick={()=>{setPanel("targeting");setMobileNav(false);}}><Target size={17}/> Prospectividade</button>
       </nav>
-      <div className="side-bottom"><div className="edition">R2 <span>Sentinel Hub pilot</span></div><button onClick={logout}><LogOut size={16}/> Sair</button></div>
+      <div className="side-bottom"><div className="edition">R3 <span>Targeting pilot</span></div><button onClick={logout}><LogOut size={16}/> Sair</button></div>
     </aside>
     <div className="main">
       <header className="topbar"><button className="mobile-menu icon-button" aria-label="Navegação" onClick={()=>setMobileNav(true)}><Menu/></button><div className="breadcrumb">Exploration Workspace <span>/</span> {project?.name||"Todos os projectos"}</div><div className="top-actions"><select aria-label="Organização" value={orgId} onChange={e=>setOrgId(e.target.value)}>{orgs.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select><span className="top-avatar">GP</span></div></header>
       <div className="content">
         <section className="explorer-panel">
-          <div className="panel-header"><span className="eyebrow">{panel==="projects"?"EXPLORATION PROJECTS":panel==="layers"?"GEOSPATIAL DATA":panel==="raster"?"SPECTRAL PROCESSING":"EARTH OBSERVATION"}</span><h2>{panel==="projects"?"Projectos":panel==="layers"?"Camadas":panel==="raster"?"Índices espectrais":"Sentinel Explorer"}</h2><p>{panel==="projects"?"Organize os seus estudos de prospecção.":panel==="layers"?"Importe dados vectoriais para análise.":panel==="raster"?"Processar Sentinel-2 e guardar GeoTIFF.":"Consulte cenas Sentinel-2 L2A do Copernicus."}</p></div>
+          <div className="panel-header"><span className="eyebrow">{panel==="projects"?"EXPLORATION PROJECTS":panel==="layers"?"GEOSPATIAL DATA":panel==="raster"?"SPECTRAL PROCESSING":panel==="targeting"?"PROSPECTIVITY MODELS":"EARTH OBSERVATION"}</span><h2>{panel==="projects"?"Projectos":panel==="layers"?"Camadas":panel==="raster"?"Índices espectrais":panel==="targeting"?"Prospectividade":"Sentinel Explorer"}</h2><p>{panel==="projects"?"Organize os seus estudos de prospecção.":panel==="layers"?"Importe dados vectoriais para análise.":panel==="raster"?"Processar Sentinel-2 e guardar GeoTIFF.":panel==="targeting"?"Combine evidências para priorizar alvos.":"Consulte cenas Sentinel-2 L2A do Copernicus."}</p></div>
           {error&&<div role="alert" className="error">{error}<button onClick={()=>setError("")} aria-label="Fechar"><X size={14}/></button></div>}
           {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")} aria-label="Fechar"><X size={14}/></button></div>}
           {panel==="projects"&&<div className="panel-body">
@@ -220,6 +236,7 @@ export default function App(){
               {!datasets.length&&<div className="empty"><Database size={27}/><p>Nenhuma camada carregada.</p></div>}
             </>}
           </div>}
+          {panel==="targeting"&&(project?<TargetingPanel key={project.id+"-"+orgId} orgId={orgId} projectId={project.id} token={token} datasets={datasets} onPreview={setRasterOverlay} onTargets={setTargetFeatures}/>:<div className="panel-body"><div className="empty">Seleccione um projecto para criar modelos de prospectividade.</div></div>)}
           {panel==="raster"&&(project?<RasterPanel key={project.id+"-"+orgId} orgId={orgId} projectId={project.id} token={token} onPreview={setRasterOverlay}/>:<div className="panel-body"><div className="empty">Seleccione um projecto para processar imagens Sentinel-2.</div></div>)}
           {panel==="sentinel"&&<div className="panel-body">
             {!project?<div className="empty"><Satellite size={27}/><p>Seleccione um projecto para pesquisar imagens na sua área.</p></div>:<>
