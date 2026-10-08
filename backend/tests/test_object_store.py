@@ -3,6 +3,7 @@ import uuid
 import pytest
 from google.cloud import storage
 from app.object_store import get_local_artifact,publish_artifacts
+from app.raster_processing import safe_job_dir
 
 def test_private_cloud_publish_and_remote_cache(monkeypatch,tmp_path):
     objects={}
@@ -30,7 +31,7 @@ def test_private_cloud_publish_and_remote_cache(monkeypatch,tmp_path):
     monkeypatch.setenv("GCS_PRIVATE_BUCKET","r4-test-private")
     monkeypatch.setenv("RASTER_STORAGE_DIR",str(tmp_path))
     org,project,run=[str(uuid.uuid4()) for _ in range(3)]
-    file_path=get_local_artifact(org,project,run,"preview.png")
+    file_path=safe_job_dir(org,project,run)/"preview.png"
     file_path.parent.mkdir(parents=True,exist_ok=True)
     file_path.write_bytes(b"png-private")
     publish_artifacts(org,project,run,["preview.png"])
