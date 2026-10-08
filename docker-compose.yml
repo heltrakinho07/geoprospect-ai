@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: gpadmin
+      POSTGRES_DB: gpdb
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Define POSTGRES_ADMIN_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Define APP_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gpadmin -d gpdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://gp_app:${APP_DB_PASSWORD}@db:5432/gpdb
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
+      APP_ENV: development
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "python -m app.manage && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      - api
+volumes:
+  postgres_data:
