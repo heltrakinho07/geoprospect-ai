@@ -1,0 +1,37 @@
+name: Import GeoProspect AI starter
+on:
+  push:
+    branches:
+      - feat/initial-saas-r0-r1
+    paths:
+      - source-payload/part-04
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Unpack verified starter source
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 00 01 02 03 04; do test -s "source-payload/part-$i"; done
+          cat source-payload/part-{00,01,02,03,04} | base64 --decode > /tmp/geoprospect-ai-starter.tar.xz
+          mkdir -p /tmp/geomoz-independent-source
+          tar -xJf /tmp/geoprospect-ai-starter.tar.xz -C /tmp/geomoz-independent-source
+          cp -a /tmp/geomoz-independent-source/. .
+          rm -rf source-payload
+          rm -f .github/workflows/import-starter.yml
+          git add -A
+          git diff --cached --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "feat: import standalone GeoProspect AI R0-R1 source"
+          git push origin HEAD:feat/initial-saas-r0-r1
