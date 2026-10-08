@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Exemplo fictício 01",
+        "source": "demonstração"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.4,
+          -18.6
+        ]
+      }
+    }
+  ]
+}
