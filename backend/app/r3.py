@@ -121,6 +121,8 @@ def execute_run(run_id: str, org_id: str, project_id: str, aoi: dict,
                             vector_data.get("structural_dataset_id"),
                             vector_data.get("geology_dataset_id"),
                             org_id, project_id, run_id)
+            if db.bind.dialect.name == "postgresql":
+                db.execute(text("SELECT set_config('app.current_org_id', :org, true)"), {"org": org_id})
             run.stats = stats
             run.status = "completed"
             run.error = None
