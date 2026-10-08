@@ -20,7 +20,12 @@ services:
       DATABASE_URL: postgresql+psycopg://gp_app:${APP_DB_PASSWORD}@db:5432/gpdb
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
       APP_ENV: development
+      SENTINEL_HUB_CLIENT_ID: ${SENTINEL_HUB_CLIENT_ID:-}
+      SENTINEL_HUB_CLIENT_SECRET: ${SENTINEL_HUB_CLIENT_SECRET:-}
+      RASTER_STORAGE_DIR: /app/storage/rasters
       CORS_ORIGINS: http://localhost:5173
+    volumes:
+      - raster_storage:/app/storage/rasters
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -37,4 +42,5 @@ services:
     depends_on:
       - api
 volumes:
+  raster_storage:
   postgres_data:

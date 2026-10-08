@@ -23,3 +23,11 @@
 ## R4 — AI / ML
 - [ ] Authorized geoscience tool registry, auditable assistant, tenant-scoped RAG.
 - [ ] Supervised ML with proper spatial validation and uncertainty reporting.
+
+## R2 — Sentinel Hub pilot (new)
+- [x] OAuth2 client credentials (server environment variables only), Process API for Sentinel-2 L2A.
+- [x] NDVI, NDMI, NDWI, SWIR B11/B12 ratio and visible B04/B02 ratio; cloud SCL mask.
+- [x] Background tasks with persistent tenant-scoped job records and local private GeoTIFF/PNG outputs.
+- [x] Authenticated downloads, per-organization daily limit and pixel/area/time budgets.
+- [ ] Production queue (Cloud Tasks/Cloud Run Jobs), object storage and recovery after server restart.
+- [ ] Multi-scene selection/provenance, real provider-account smoke tests and external QA validation.
