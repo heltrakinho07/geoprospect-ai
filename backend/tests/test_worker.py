@@ -72,3 +72,19 @@ def test_single_layer_has_no_relative_weight_sensitivity():
     score,valid=weighted_evidence(layers,{"spectral":1})
     result=weight_sensitivity(layers,{"spectral":1},score,valid,.5)
     assert not result["scenarios"] and result["max_threshold_flip_fraction"]==0
+
+
+def test_exhausted_stale_lease_does_not_get_stuck(client):
+    from uuid import uuid4
+    from app.models import QueueTask
+    task=QueueTask(organization_id=str(uuid4()),project_id=str(uuid4()),
+                   kind="raster",target_id=str(uuid4()),status="leased",
+                   attempts=2,max_attempts=2,
+                   lease_until=utcnow()-timedelta(hours=1))
+    with client.test_session_factory() as db:
+        db.add(task);db.commit();identifier=task.id
+    assert run_once(client.test_session_factory)
+    with client.test_session_factory() as db:
+        stored=db.get(QueueTask,identifier)
+        assert stored.status=="dead" and stored.attempts==2
+    assert not run_once(client.test_session_factory)
