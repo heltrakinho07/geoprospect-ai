@@ -55,3 +55,7 @@ Repository: https://github.com/heltrakinho07/geoprospect-ai
 ## R2 raster pilot
 
 Real Sentinel Hub raster requests require configured server OAuth credentials. See [R2 instructions](docs/R2_SENTINEL_PROCESSING.md). This is not yet a production worker queue.
+
+## R3 prospectivity (pilot)
+
+The [R3 multicriteria workflow](docs/R3_PROSPECTIVITY.md) combines a completed R2 spectral index, optional line fault evidence and mapped favorable lithologies with user-specified weights. It creates relative favorability GeoTIFF, PNG, candidate-target GeoJSON and integrity/provenance metadata. It is **not** validated mineral prediction or a resource estimate.

@@ -54,6 +54,8 @@ def execute_job(job_id:str,org_id:str,project_id:str,aoi:dict,session_factory=No
             db.commit()
             raw=fetch_index(aoi,(job.date_from,job.date_to),job.index_name,(384,384),job.max_cloud)
             result=process_tiff(raw,aoi,org_id,project_id,job_id)
+            if db.bind.dialect.name=="postgresql":
+                db.execute(text("SELECT set_config('app.current_org_id', :org, true)"),{"org":org_id})
             job.stats=result
             job.status="completed"
             job.error=None

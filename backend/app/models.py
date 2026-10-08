@@ -68,3 +68,17 @@ class RasterJob(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     stats: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ProspectivityRun(Base):
+    __tablename__ = "prospectivity_runs"
+    __table_args__ = (ForeignKeyConstraint(["project_id", "organization_id"],
+        ["projects.id", "projects.organization_id"], name="fk_prospectivity_project_tenant"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    organization_id: Mapped[str] = mapped_column(String(36), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="queued")
+    config: Mapped[dict] = mapped_column(JSON)
+    stats: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
