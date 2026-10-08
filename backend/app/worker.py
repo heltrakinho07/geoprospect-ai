@@ -36,9 +36,9 @@ def claim_task(factory=SessionLocal):
     with factory() as db:
         q = (select(QueueTask)
              .where(
-                 QueueTask.attempts < QueueTask.max_attempts,
-                 QueueTask.available_at <= now,
-                 or_(QueueTask.status == "queued",
+                 or_(and_(QueueTask.status == "queued",
+                          QueueTask.attempts < QueueTask.max_attempts,
+                          QueueTask.available_at <= now),
                      and_(QueueTask.status == "leased",
                           QueueTask.lease_until < now)))
              .order_by(QueueTask.available_at.asc(), QueueTask.created_at.asc())
@@ -48,13 +48,16 @@ def claim_task(factory=SessionLocal):
         task = db.scalar(q)
         if task is None:
             return None
-        task.attempts += 1
+        exhausted = task.attempts >= task.max_attempts
+        if not exhausted:
+            task.attempts += 1
         task.status = "leased"
         task.lease_until = now + timedelta(minutes=LEASE_MINUTES)
         data = {
             "id": task.id, "kind": task.kind, "target_id": task.target_id,
             "org_id": task.organization_id, "project_id": task.project_id,
-            "attempts": task.attempts, "max_attempts": task.max_attempts
+            "attempts": task.attempts, "max_attempts": task.max_attempts,
+            "exhausted": exhausted
         }
         db.commit()
         return data
@@ -100,6 +103,9 @@ def run_once(factory=SessionLocal):
     task = claim_task(factory)
     if task is None:
         return False
+    if task["exhausted"]:
+        _finalize(factory, task, False)
+        return True
 
     try:
         with factory() as db:
