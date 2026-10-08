@@ -151,3 +151,6 @@ async def search_stac(org_id:str,data:StacSearchIn,user:User=Depends(current_use
 # R2 routes are isolated from R0 API resources.
 from app.r2 import router as raster_router
 app.include_router(raster_router)
+
+from app.r3 import router as prospectivity_router
+app.include_router(prospectivity_router)

@@ -18,3 +18,11 @@ DROP POLICY IF EXISTS raster_jobs_tenant_policy ON raster_jobs;
 CREATE POLICY raster_jobs_tenant_policy ON raster_jobs
 USING (organization_id = NULLIF(current_setting('app.current_org_id', true), ''))
 WITH CHECK (organization_id = NULLIF(current_setting('app.current_org_id', true), ''));
+
+
+ALTER TABLE prospectivity_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prospectivity_runs FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS prospectivity_runs_tenant_policy ON prospectivity_runs;
+CREATE POLICY prospectivity_runs_tenant_policy ON prospectivity_runs
+USING (organization_id = NULLIF(current_setting('app.current_org_id', true), ''))
+WITH CHECK (organization_id = NULLIF(current_setting('app.current_org_id', true), ''));
