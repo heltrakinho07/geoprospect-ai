@@ -7,7 +7,7 @@ from fastapi import APIRouter,BackgroundTasks,Depends,HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel,Field
 from sqlalchemy import select,text,func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,sessionmaker
 from shapely.geometry import shape
 from .db import SessionLocal,get_db
 from .models import RasterJob,User
@@ -42,8 +42,8 @@ def get_authorized_job(db:Session,user:User,org_id:str,project_id:str,job_id:str
         raise HTTPException(404,"Processamento não encontrado")
     return job
 
-def execute_job(job_id:str,org_id:str,project_id:str,aoi:dict) -> None:
-    with SessionLocal() as db:
+def execute_job(job_id:str,org_id:str,project_id:str,aoi:dict,session_factory=None) -> None:
+    with (session_factory or SessionLocal)() as db:
         try:
             if db.bind.dialect.name=="postgresql":
                 db.execute(text("SELECT set_config('app.current_org_id', :org, true)"),{"org":org_id})
@@ -105,7 +105,7 @@ def create_job(org_id:str,project_id:str,data:RasterRequest,background:Backgroun
     db.add(job);db.flush()
     public=as_public(job)
     db.commit()
-    background.add_task(execute_job,job.id,org_id,project_id,project.aoi_geojson)
+    background.add_task(execute_job,job.id,org_id,project_id,project.aoi_geojson,sessionmaker(bind=db.get_bind(),expire_on_commit=False))
     return public
 
 @router.get("/jobs")
