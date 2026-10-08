@@ -32,6 +32,24 @@ services:
       db:
         condition: service_healthy
     command: ["sh", "-c", "python -m app.manage && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+  worker:
+    build: ./backend
+    command: ["python", "-m", "app.worker"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://gp_app:${APP_DB_PASSWORD}@db:5432/gpdb
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
+      APP_ENV: development
+      SENTINEL_HUB_CLIENT_ID: ${SENTINEL_HUB_CLIENT_ID:-}
+      SENTINEL_HUB_CLIENT_SECRET: ${SENTINEL_HUB_CLIENT_SECRET:-}
+      RASTER_STORAGE_DIR: /app/storage/rasters
+    volumes:
+      - raster_storage:/app/storage/rasters
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
   web:
     build:
       context: ./frontend
