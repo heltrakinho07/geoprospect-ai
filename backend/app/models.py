@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from sqlalchemy import Date, DateTime, ForeignKey, ForeignKeyConstraint, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
@@ -61,8 +61,8 @@ class RasterJob(Base):
     organization_id: Mapped[str] = mapped_column(String(36), index=True)
     project_id: Mapped[str] = mapped_column(String(36), index=True)
     index_name: Mapped[str] = mapped_column(String(40))
-    date_from: Mapped[__import__("datetime").date] = mapped_column(Date)
-    date_to: Mapped[__import__("datetime").date] = mapped_column(Date)
+    date_from: Mapped[date] = mapped_column(Date)
+    date_to: Mapped[date] = mapped_column(Date)
     max_cloud: Mapped[int] = mapped_column()
     status: Mapped[str] = mapped_column(String(20), default="queued")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)

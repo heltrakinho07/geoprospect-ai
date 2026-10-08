@@ -69,18 +69,6 @@ def execute_job(job_id:str,org_id:str,project_id:str,aoi:dict) -> None:
                 db.commit()
             # Do not leak provider response, client credentials or file paths.
 
-@router.get("/availability")
-def availability(org_id:str,project_id:str,authorization:str|None=None,db:Session=Depends(get_db)):
-    from fastapi import Header
-    # Authentication via Depends is applied in route closure below; no anonymous access.
-    raise HTTPException(410,"Endpoint desactivado")
-
-# These API dependencies are defined as wrappers because the main module registers this router last.
-def signed_user(authorization: str | None = None,db:Session=Depends(get_db)):
-    from fastapi import Header
-    # Header injection is set on wrapper below.
-    return authorization
-
 from fastapi import Header
 def authenticated(authorization:str|None=Header(default=None),db:Session=Depends(get_db)) -> User:
     from .main import current_user
