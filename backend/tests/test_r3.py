@@ -67,6 +67,12 @@ def test_r3_complete_model_and_isolation(client,monkeypatch,tmp_path):
         assert feature["properties"]["area_km2"]>0
     preview=client.get(path+"/runs/"+run_id+"/preview",headers=header(user))
     raster_download=client.get(path+"/runs/"+run_id+"/geotiff",headers=header(user))
+    provenance=client.get(path+"/runs/"+run_id+"/provenance",headers=header(user))
+    assert provenance.status_code==200
+    detail=provenance.json()
+    assert detail["algorithm"]=="geoprospect_weighted_evidence_r3_v1"
+    assert len(detail["output_geotiff_sha256"])==64
+    assert detail["source_job_id"]==raster_id
     assert preview.status_code==200 and preview.content.startswith(b"\x89PNG")
     assert raster_download.status_code==200 and raster_download.content[:4] in (b"II*\x00",b"MM\x00*")
     for endpoint in ["/runs","/runs/"+run_id,"/runs/"+run_id+"/preview","/runs/"+run_id+"/targets"]:

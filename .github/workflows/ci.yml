@@ -25,3 +25,30 @@ jobs:
           node-version: '22'
       - run: cd frontend && npm install --no-audit --no-fund
       - run: cd frontend && npm run build
+
+  postgres-rls:
+    runs-on: ubuntu-latest
+    services:
+      database:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: gpadmin
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: gpci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gpadmin -d gpci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PG_TEST_ADMIN_URL: postgresql+psycopg://gpadmin:test-only-password@localhost:5432/gpci
+      PG_TEST_RUNTIME_URL: postgresql+psycopg://gp_ci_runtime:ci-ephemeral-only@localhost:5432/gpci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements-dev.txt
+      - run: cd backend && python -m pytest -q tests/test_postgres_rls.py
