@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from "react";
 import maplibregl from "maplibre-gl";
 import {bbox} from "@turf/turf";
 import {api} from "./api";
+import RasterPanel,{type RasterOverlay} from "./RasterPanel";
 import {Activity,ArrowRight,ChevronDown,Cloud,Database,Download,FileJson,FolderOpen,Layers3,LogOut,MapPinned,Menu,Plus,Satellite,ShieldCheck,Target,Trash2,Upload,Waypoints,X} from "lucide-react";
 
 type GeoData={type:string;coordinates?:unknown;features?:unknown[];geometry?:GeoData};
@@ -55,11 +56,12 @@ export default function App(){
   const [token,setToken]=useState(()=>sessionStorage.getItem("gp_token")||"");
   const [orgs,setOrgs]=useState<Membership[]>([]);
   const [orgId,setOrgId]=useState("");
-  const [panel,setPanel]=useState<"projects"|"layers"|"sentinel">("projects");
+  const [panel,setPanel]=useState<"projects"|"layers"|"sentinel"|"raster">("projects");
   const [projects,setProjects]=useState<Project[]>([]);
   const [project,setProject]=useState<Project|null>(null);
   const [datasets,setDatasets]=useState<Dataset[]>([]);
   const [scenes,setScenes]=useState<StacItem[]>([]);
+  const [rasterOverlay,setRasterOverlay]=useState<RasterOverlay|null>(null);
   const [draw,setDraw]=useState(false);
   const drawRef=useRef(false);
   const [vertices,setVertices]=useState<number[][]>([]);
@@ -74,6 +76,27 @@ export default function App(){
   const pickArea=useRef<HTMLInputElement|null>(null);
   const pickDataset=useRef<HTMLInputElement|null>(null);
 
+  useEffect(()=>{
+    const m=map.current;
+    if(!m||!mapReady||!rasterOverlay)return;
+    const [west,south,east,north]=rasterOverlay.bounds;
+    // Georeferenced image overlay; source is a protected blob URL fetched using bearer auth.
+    const render=()=>{
+      if(m.getLayer("processed-raster"))m.removeLayer("processed-raster");
+      if(m.getSource("processed-raster"))m.removeSource("processed-raster");
+      m.addSource("processed-raster",{type:"image",url:rasterOverlay.url,
+        coordinates:[[west,north],[east,north],[east,south],[west,south]]});
+      m.addLayer({id:"processed-raster",type:"raster",source:"processed-raster",
+        paint:{"raster-opacity":0.82}},m.getLayer("project-outline")?"project-outline":undefined);
+    };
+    if(m.isStyleLoaded())render();else m.once("load",render);
+    return ()=>{
+      if(m.getLayer("processed-raster"))m.removeLayer("processed-raster");
+      if(m.getSource("processed-raster"))m.removeSource("processed-raster");
+      URL.revokeObjectURL(rasterOverlay.url);
+    };
+  },[rasterOverlay,mapReady]);
+  useEffect(()=>{setRasterOverlay(null);},[orgId,project?.id]);
   useEffect(()=>{drawRef.current=draw;},[draw]);
   useEffect(()=>{
     if(!token){setOrgs([]);setOrgId("");return;}
@@ -169,15 +192,16 @@ export default function App(){
         <button className={panel==="projects"?"active":""} onClick={()=>{setPanel("projects");setMobileNav(false);}}><FolderOpen size={17}/> Projectos <ArrowRight size={14} className="nav-arrow"/></button>
         <button className={panel==="layers"?"active":""} onClick={()=>{setPanel("layers");setMobileNav(false);}}><Layers3 size={17}/> Camadas</button>
         <button className={panel==="sentinel"?"active":""} onClick={()=>{setPanel("sentinel");setMobileNav(false);}}><Satellite size={17}/> Sentinel Explorer</button>
+        <button className={panel==="raster"?"active":""} onClick={()=>{setPanel("raster");setMobileNav(false);}}><Cloud size={17}/> Índices espectrais</button>
         <button disabled title="Disponível na fase R3"><Target size={17}/> Prospectivity Engine <span className="soon">R3</span></button>
       </nav>
-      <div className="side-bottom"><div className="edition">R0 / R1 <span>Development preview</span></div><button onClick={logout}><LogOut size={16}/> Sair</button></div>
+      <div className="side-bottom"><div className="edition">R2 <span>Sentinel Hub pilot</span></div><button onClick={logout}><LogOut size={16}/> Sair</button></div>
     </aside>
     <div className="main">
       <header className="topbar"><button className="mobile-menu icon-button" aria-label="Navegação" onClick={()=>setMobileNav(true)}><Menu/></button><div className="breadcrumb">Exploration Workspace <span>/</span> {project?.name||"Todos os projectos"}</div><div className="top-actions"><select aria-label="Organização" value={orgId} onChange={e=>setOrgId(e.target.value)}>{orgs.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select><span className="top-avatar">GP</span></div></header>
       <div className="content">
         <section className="explorer-panel">
-          <div className="panel-header"><span className="eyebrow">{panel==="projects"?"EXPLORATION PROJECTS":panel==="layers"?"GEOSPATIAL DATA":"EARTH OBSERVATION"}</span><h2>{panel==="projects"?"Projectos":panel==="layers"?"Camadas":"Sentinel Explorer"}</h2><p>{panel==="projects"?"Organize os seus estudos de prospecção.":panel==="layers"?"Importe dados vectoriais para análise.":"Consulte cenas Sentinel-2 L2A do Copernicus."}</p></div>
+          <div className="panel-header"><span className="eyebrow">{panel==="projects"?"EXPLORATION PROJECTS":panel==="layers"?"GEOSPATIAL DATA":panel==="raster"?"SPECTRAL PROCESSING":"EARTH OBSERVATION"}</span><h2>{panel==="projects"?"Projectos":panel==="layers"?"Camadas":panel==="raster"?"Índices espectrais":"Sentinel Explorer"}</h2><p>{panel==="projects"?"Organize os seus estudos de prospecção.":panel==="layers"?"Importe dados vectoriais para análise.":panel==="raster"?"Processar Sentinel-2 e guardar GeoTIFF.":"Consulte cenas Sentinel-2 L2A do Copernicus."}</p></div>
           {error&&<div role="alert" className="error">{error}<button onClick={()=>setError("")} aria-label="Fechar"><X size={14}/></button></div>}
           {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")} aria-label="Fechar"><X size={14}/></button></div>}
           {panel==="projects"&&<div className="panel-body">
@@ -196,6 +220,7 @@ export default function App(){
               {!datasets.length&&<div className="empty"><Database size={27}/><p>Nenhuma camada carregada.</p></div>}
             </>}
           </div>}
+          {panel==="raster"&&(project?<RasterPanel key={project.id+"-"+orgId} orgId={orgId} projectId={project.id} token={token} onPreview={setRasterOverlay}/>:<div className="panel-body"><div className="empty">Seleccione um projecto para processar imagens Sentinel-2.</div></div>)}
           {panel==="sentinel"&&<div className="panel-body">
             {!project?<div className="empty"><Satellite size={27}/><p>Seleccione um projecto para pesquisar imagens na sua área.</p></div>:<>
               <label className="field">Data inicial<input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}/></label>
@@ -204,7 +229,7 @@ export default function App(){
               <button className="primary" onClick={()=>void searchSentinel()} disabled={busy}><Cloud size={16}/>{busy?"A pesquisar...":"Pesquisar cenas"}</button>
               <div className="list-label">CENAS ENCONTRADAS ({scenes.length})</div>
               {scenes.map((s,i)=><div className="scene-row" key={s.id||i}><Satellite size={16}/><div><b>{s.datetime?.slice(0,10)||"Sem data"}</b><small>{s.id?.slice(0,38)} · {s.cloud_cover??"?"}% nuvens</small></div></div>)}
-              <p className="disclaimer">O catálogo fornece metadados reais; download, cálculo espectral e visualização raster serão implementados em R2.</p>
+              <p className="disclaimer">O catálogo apresenta metadados de cenas; utilize a secção Índices espectrais para processar rasters no servidor.</p>
             </>}
           </div>}
         </section>

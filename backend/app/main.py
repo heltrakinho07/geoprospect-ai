@@ -147,3 +147,7 @@ async def search_stac(org_id:str,data:StacSearchIn,user:User=Depends(current_use
         raise HTTPException(502,"Catálogo Sentinel indisponível") from exc
     features=catalog.get("features",[]) if isinstance(catalog,dict) else []
     return {"items":[{"id":f.get("id"),"datetime":f.get("properties",{}).get("datetime"),"cloud_cover":f.get("properties",{}).get("eo:cloud_cover"),"bbox":f.get("bbox"),"collection":f.get("collection")} for f in features[:data.limit]],"note":"Apenas metadados; processamento raster em R2."}
+
+# R2 routes are isolated from R0 API resources.
+from app.r2 import router as raster_router
+app.include_router(raster_router)

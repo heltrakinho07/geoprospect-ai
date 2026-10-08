@@ -51,3 +51,7 @@ Frontend build (requires Node.js 22+):
 Independent of GeoMoz Explorer. Copyright GEOLÍTHICA. No open-source license is granted by this repository. This public repository should **never** receive commercial customer datasets, secret keys or restricted third-party software.
 
 Repository: https://github.com/heltrakinho07/geoprospect-ai
+
+## R2 raster pilot
+
+Real Sentinel Hub raster requests require configured server OAuth credentials. See [R2 instructions](docs/R2_SENTINEL_PROCESSING.md). This is not yet a production worker queue.
