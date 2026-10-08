@@ -38,3 +38,12 @@
 - [x] Authenticated tenant-scoped jobs, results and downloads; preview in MapLibre.
 - [ ] Validate real Manica datasets, method sensitivity, uncertain geology and QA/QC.
 - [ ] Durable cloud jobs, migrations, backed-up object storage and production isolation checks.
+
+## R4 — Durable worker and sensitivity (pilot)
+- [x] SQL job queue, dedicated worker, atomic request+queue commit and lease recovery.
+- [x] Perturbation sensitivity of normalized evidence weights (±20%) and threshold-change diagnostics.
+- [ ] Production cloud object storage, lease heartbeats, least-privilege worker identity and worker telemetry.
+- [ ] Geological field validation and methodology review.
+
+- [x] Optional private Cloud Storage adapter with authenticated API retrieval and tenant-scoped object prefixes.
+- [ ] Create and configure production bucket, Google Cloud identity, IAM, retention, backup and production deployment.

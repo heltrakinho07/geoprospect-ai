@@ -16,6 +16,7 @@ def client():
             yield session
     app.dependency_overrides[get_db]=override
     with TestClient(app) as test_client:
+        test_client.test_session_factory = sessions
         yield test_client
     app.dependency_overrides.clear()
     engine.dispose()

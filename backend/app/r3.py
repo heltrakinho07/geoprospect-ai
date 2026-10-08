@@ -4,15 +4,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from .db import SessionLocal, get_db
-from .models import Dataset, ProspectivityRun, RasterJob, User
+from .models import Dataset, ProspectivityRun, QueueTask, RasterJob, User
 from .raster_processing import safe_job_dir
+from .object_store import publish_artifacts, get_local_artifact
 from .targeting_engine import EvidenceError, analyze
 
 router = APIRouter(prefix="/v1/orgs/{org_id}/projects/{project_id}/prospectivity",
@@ -114,13 +115,15 @@ def execute_run(run_id: str, org_id: str, project_id: str, aoi: dict,
 
             run.status = "running"
             db.commit()
-            input_tiff = safe_job_dir(org_id, project_id, source.id) / "index.tif"
+            input_tiff = get_local_artifact(org_id, project_id, source.id, "index.tif")
             if not input_tiff.is_file():
                 raise EvidenceError("O GeoTIFF de origem não está disponível no armazenamento")
             stats = analyze(input_tiff, aoi, cfg,
                             vector_data.get("structural_dataset_id"),
                             vector_data.get("geology_dataset_id"),
                             org_id, project_id, run_id)
+            publish_artifacts(org_id, project_id, run_id,
+                              ["prospectivity.tif","preview.png","targets.geojson","provenance.json","sensitivity.json"])
             if db.bind.dialect.name == "postgresql":
                 db.execute(text("SELECT set_config('app.current_org_id', :org, true)"), {"org": org_id})
             run.stats = stats
@@ -152,7 +155,7 @@ def config(org_id: str, project_id: str,
 
 @router.post("/runs", status_code=202)
 def create_run(org_id: str, project_id: str, data: ProspectivityRequest,
-               background: BackgroundTasks, user: User = Depends(authenticated),
+               user: User = Depends(authenticated),
                db: Session = Depends(get_db)):
     project = scoped_project(db, user, org_id, project_id, write=True)
     raster = db.scalar(select(RasterJob).where(
@@ -181,12 +184,9 @@ def create_run(org_id: str, project_id: str, data: ProspectivityRequest,
                            status="queued", config=data.model_dump())
     db.add(run)
     db.flush()
+    db.add(QueueTask(organization_id=org_id,project_id=project_id,kind="prospectivity",target_id=run.id))
     response = response_data(run)
-    aoi = project.aoi_geojson
-    run_id = run.id
-    factory = sessionmaker(bind=db.get_bind(), expire_on_commit=False)
     db.commit()
-    background.add_task(execute_run, run_id, org_id, project_id, aoi, factory)
     return response
 
 
@@ -214,7 +214,8 @@ def download_run(org_id: str, project_id: str, run_id: str, kind: str,
     files = {"preview": ("preview.png", "image/png"),
              "geotiff": ("prospectivity.tif", "image/tiff"),
              "targets": ("targets.geojson", "application/geo+json"),
-             "provenance": ("provenance.json", "application/json")}
+             "provenance": ("provenance.json", "application/json"),
+             "sensitivity": ("sensitivity.json", "application/json")}
     if kind not in files:
         raise HTTPException(404, "Formato indisponível")
     if run.status != "completed":
@@ -224,7 +225,7 @@ def download_run(org_id: str, project_id: str, run_id: str, kind: str,
     except ValueError:
         raise HTTPException(404, "Identificador inválido")
     filename, media_type = files[kind]
-    path = folder / filename
+    path = get_local_artifact(org_id, project_id, run_id, filename)
     if not path.is_file():
         raise HTTPException(404, "Ficheiro não encontrado")
     return FileResponse(path, media_type=media_type,

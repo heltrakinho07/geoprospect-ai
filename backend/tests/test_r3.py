@@ -2,6 +2,7 @@
 import json
 
 from app import r2
+from app.worker import run_once
 from .test_api import register, header
 from .test_r2 import fake_tiff, AOI
 
@@ -34,6 +35,7 @@ def test_r3_complete_model_and_isolation(client,monkeypatch,tmp_path):
     })
     assert raster.status_code == 202, raster.text
     raster_id=raster.json()["id"]
+    assert run_once(client.test_session_factory)
     fault=add_layer(client,user,org,project,"Falhas",[
         {"type":"Feature","properties":{"name":"Fault A"},
          "geometry":{"type":"LineString","coordinates":[[32.03,-19.0],[32.03,-18.9]]}}])
@@ -52,6 +54,7 @@ def test_r3_complete_model_and_isolation(client,monkeypatch,tmp_path):
     response=client.post(path+"/runs",headers=header(user),json=request)
     assert response.status_code==202,response.text
     run_id=response.json()["id"]
+    assert run_once(client.test_session_factory)
     completed=client.get(path+"/runs/"+run_id,headers=header(user))
     assert completed.status_code==200,completed.text
     outcome=completed.json()
@@ -73,9 +76,15 @@ def test_r3_complete_model_and_isolation(client,monkeypatch,tmp_path):
     assert detail["algorithm"]=="geoprospect_weighted_evidence_r3_v1"
     assert len(detail["output_geotiff_sha256"])==64
     assert detail["source_job_id"]==raster_id
+    assert len(detail["output_sensitivity_sha256"])==64
+    sensitivity=client.get(path+"/runs/"+run_id+"/sensitivity",headers=header(user))
+    assert sensitivity.status_code==200
+    report=sensitivity.json()
+    assert len(report["scenarios"])==6
+    assert 0<=report["max_threshold_flip_fraction"]<=1
     assert preview.status_code==200 and preview.content.startswith(b"\x89PNG")
     assert raster_download.status_code==200 and raster_download.content[:4] in (b"II*\x00",b"MM\x00*")
-    for endpoint in ["/runs","/runs/"+run_id,"/runs/"+run_id+"/preview","/runs/"+run_id+"/targets"]:
+    for endpoint in ["/runs","/runs/"+run_id,"/runs/"+run_id+"/preview","/runs/"+run_id+"/targets","/runs/"+run_id+"/sensitivity"]:
         assert client.get(path+endpoint,headers=header(outsider)).status_code==404
     assert client.post(path+"/runs",headers=header(outsider),json=request).status_code==404
 

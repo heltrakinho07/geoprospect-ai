@@ -24,6 +24,7 @@ from shapely.geometry import shape, mapping
 from shapely.ops import transform as transform_geometry
 
 from .prospectivity import weighted_evidence
+from .sensitivity import weight_sensitivity
 from .sentinel import NODATA
 from .raster_processing import safe_job_dir
 
@@ -172,6 +173,7 @@ def analyze(source_path: Path, aoi: dict, settings: dict,
         if not valid.any():
             raise EvidenceError("As camadas não partilham pixels válidos; reveja cobertura e NoData")
         threshold = settings["target_threshold"]
+        sensitivity = weight_sensitivity(layers, weights, score, valid, threshold)
         targets = _target_polygons(score, valid, tr, dst_crs, threshold, settings["min_target_pixels"])
 
         # Reproject the scientific result back onto the source grid for accurate WebGIS overlays.
@@ -207,6 +209,7 @@ def analyze(source_path: Path, aoi: dict, settings: dict,
         alpha = np.uint8(valid_src * 205)
         Image.fromarray(np.stack([red, green, blue, alpha], axis=-1), "RGBA").save(dest / "preview.png")
         (dest / "targets.geojson").write_text(json.dumps(targets, ensure_ascii=False), encoding="utf-8")
+        (dest / "sensitivity.json").write_text(json.dumps(sensitivity, indent=2, ensure_ascii=False), encoding="utf-8")
         provenance = {
             "algorithm": "geoprospect_weighted_evidence_r3_v1",
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -222,6 +225,7 @@ def analyze(source_path: Path, aoi: dict, settings: dict,
             ).hexdigest() if geology_geojson is not None else None,
             "output_geotiff_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
             "output_targets_sha256": hashlib.sha256((dest / "targets.geojson").read_bytes()).hexdigest(),
+            "output_sensitivity_sha256": hashlib.sha256((dest / "sensitivity.json").read_bytes()).hexdigest(),
             "crs_metric": dst_crs.to_string(),
             "valid_data_fraction": round(float(valid.sum()) / max(int(inside.sum()), 1), 5),
         }
@@ -243,6 +247,7 @@ def analyze(source_path: Path, aoi: dict, settings: dict,
             "width": src.width, "height": src.height,
             "inputs": sorted(layers),
             "weights_normalized": {k: round(v / sum(weights.values()), 6) for k, v in weights.items()},
+            "sensitivity": {"scenarios":len(sensitivity["scenarios"]),"max_threshold_flip_fraction":sensitivity["max_threshold_flip_fraction"],"relative_perturbation":sensitivity["relative_perturbation"]},
             "method": "masked_weighted_linear_combination",
             "interpretation": "relative_favorability_not_deposit_probability",
         }
