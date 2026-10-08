@@ -41,7 +41,6 @@ def claim_task(factory=SessionLocal):
                  or_(QueueTask.status == "queued",
                      and_(QueueTask.status == "leased",
                           QueueTask.lease_until < now)))
-             )
              .order_by(QueueTask.available_at.asc(), QueueTask.created_at.asc())
              .limit(1))
         if db.bind.dialect.name == "postgresql":
