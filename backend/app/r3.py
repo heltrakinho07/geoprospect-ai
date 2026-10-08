@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from .db import SessionLocal, get_db
-from .models import Dataset, ProspectivityRun, RasterJob, User
+from .models import Dataset, ProspectivityRun, QueueTask, RasterJob, User
 from .raster_processing import safe_job_dir
 from .targeting_engine import EvidenceError, analyze
 
@@ -152,7 +152,7 @@ def config(org_id: str, project_id: str,
 
 @router.post("/runs", status_code=202)
 def create_run(org_id: str, project_id: str, data: ProspectivityRequest,
-               background: BackgroundTasks, user: User = Depends(authenticated),
+               user: User = Depends(authenticated),
                db: Session = Depends(get_db)):
     project = scoped_project(db, user, org_id, project_id, write=True)
     raster = db.scalar(select(RasterJob).where(
@@ -181,12 +181,9 @@ def create_run(org_id: str, project_id: str, data: ProspectivityRequest,
                            status="queued", config=data.model_dump())
     db.add(run)
     db.flush()
+    db.add(QueueTask(organization_id=org_id,project_id=project_id,kind="prospectivity",target_id=run.id))
     response = response_data(run)
-    aoi = project.aoi_geojson
-    run_id = run.id
-    factory = sessionmaker(bind=db.get_bind(), expire_on_commit=False)
     db.commit()
-    background.add_task(execute_run, run_id, org_id, project_id, aoi, factory)
     return response
 
 

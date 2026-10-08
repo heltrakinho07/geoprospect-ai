@@ -3,6 +3,7 @@ from datetime import date
 from rasterio.io import MemoryFile
 from rasterio.transform import from_bounds
 from app import r2
+from app.worker import run_once
 from app.sentinel import request_body,evalscript
 from .test_api import register,header
 
@@ -55,6 +56,7 @@ def test_r2_geotiff_processing_and_cross_tenant(client,monkeypatch,tmp_path):
         json={"index":"ndvi","date_from":"2025-01-01","date_to":"2025-01-08","max_cloud":15})
     assert response.status_code==202,response.text
     jid=response.json()["id"]
+    assert run_once(client.test_session_factory)
     result=client.get(base+"/jobs/"+jid,headers=header(user))
     assert result.status_code==200 and result.json()["status"]=="completed",result.text
     assert result.json()["stats"]["pixels_valid"]>0

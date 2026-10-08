@@ -2,6 +2,7 @@
 import json
 
 from app import r2
+from app.worker import run_once
 from .test_api import register, header
 from .test_r2 import fake_tiff, AOI
 
@@ -34,6 +35,7 @@ def test_r3_complete_model_and_isolation(client,monkeypatch,tmp_path):
     })
     assert raster.status_code == 202, raster.text
     raster_id=raster.json()["id"]
+    assert run_once(client.test_session_factory)
     fault=add_layer(client,user,org,project,"Falhas",[
         {"type":"Feature","properties":{"name":"Fault A"},
          "geometry":{"type":"LineString","coordinates":[[32.03,-19.0],[32.03,-18.9]]}}])
@@ -52,6 +54,7 @@ def test_r3_complete_model_and_isolation(client,monkeypatch,tmp_path):
     response=client.post(path+"/runs",headers=header(user),json=request)
     assert response.status_code==202,response.text
     run_id=response.json()["id"]
+    assert run_once(client.test_session_factory)
     completed=client.get(path+"/runs/"+run_id,headers=header(user))
     assert completed.status_code==200,completed.text
     outcome=completed.json()

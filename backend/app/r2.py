@@ -3,14 +3,14 @@ import os
 import uuid
 from datetime import date
 from pathlib import Path
-from fastapi import APIRouter,BackgroundTasks,Depends,HTTPException
+from fastapi import APIRouter,Depends,HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel,Field
 from sqlalchemy import select,text,func
-from sqlalchemy.orm import Session,sessionmaker
+from sqlalchemy.orm import Session
 from shapely.geometry import shape
 from .db import SessionLocal,get_db
-from .models import RasterJob,User
+from .models import QueueTask,RasterJob,User
 from .sentinel import INDEXES,credentials_available,fetch_index
 from .raster_processing import safe_job_dir,process_tiff
 
@@ -84,7 +84,7 @@ def index_config(org_id:str,project_id:str,user:User=Depends(authenticated),db:S
             "notice":"Sentinel Hub OAuth2 necessário; resultados espectrais são indicadores indirectos."}
 
 @router.post("/jobs",status_code=202)
-def create_job(org_id:str,project_id:str,data:RasterRequest,background:BackgroundTasks,user:User=Depends(authenticated),db:Session=Depends(get_db)):
+def create_job(org_id:str,project_id:str,data:RasterRequest,user:User=Depends(authenticated),db:Session=Depends(get_db)):
     project=use_tenant(db,user,org_id,project_id,write=True)
     if not credentials_available():
         raise HTTPException(503,"Credenciais SENTINEL_HUB_CLIENT_ID e SENTINEL_HUB_CLIENT_SECRET necessárias no servidor")
@@ -105,9 +105,9 @@ def create_job(org_id:str,project_id:str,data:RasterRequest,background:Backgroun
     job=RasterJob(organization_id=org_id,project_id=project_id,index_name=data.index,
                   date_from=data.date_from,date_to=data.date_to,max_cloud=data.max_cloud,status="queued")
     db.add(job);db.flush()
+    db.add(QueueTask(organization_id=org_id,project_id=project_id,kind="raster",target_id=job.id))
     public=as_public(job)
     db.commit()
-    background.add_task(execute_job,job.id,org_id,project_id,project.aoi_geojson,sessionmaker(bind=db.get_bind(),expire_on_commit=False))
     return public
 
 @router.get("/jobs")
