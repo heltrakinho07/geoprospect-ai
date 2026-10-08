@@ -211,7 +211,8 @@ def download_run(org_id: str, project_id: str, run_id: str, kind: str,
     files = {"preview": ("preview.png", "image/png"),
              "geotiff": ("prospectivity.tif", "image/tiff"),
              "targets": ("targets.geojson", "application/geo+json"),
-             "provenance": ("provenance.json", "application/json")}
+             "provenance": ("provenance.json", "application/json"),
+             "sensitivity": ("sensitivity.json", "application/json")}
     if kind not in files:
         raise HTTPException(404, "Formato indisponível")
     if run.status != "completed":
