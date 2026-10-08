@@ -48,3 +48,5 @@ input:not([type=range]),select{padding:12px 13px;border-radius:9px;border:1px so
 .targeting-summary strong{font-size:13px;color:#82f0cf}.targeting-summary span{font-size:11px;color:#c0ded6}
 .targeting-summary small{color:#7bb19e}
 .wrap-actions{flex-wrap:wrap}.wrap-actions button{min-width:40%}
+
+.targeting-panel .targeting-summary small{line-height:1.45}.targeting-panel .wrap-actions button{min-width:42%}
